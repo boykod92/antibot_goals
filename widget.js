@@ -1,16 +1,14 @@
 // Функция для извлечения ID счётчика Метрики
 function getMetrikaCounterId() {
-  // Сначала пробуем извлечь из URL текущего скрипта (например, widget.js?id=88094270)
   const currentScript = document.currentScript;
   if (currentScript && currentScript.src) {
     const url = new URL(currentScript.src);
     const idFromUrl = url.searchParams.get('id');
-    if (idFromUrl && /^\d+$/.test(idFromUrl)) { // Проверяем, что ID — число
+    if (idFromUrl && /^\d+$/.test(idFromUrl)) {
       return idFromUrl;
     }
   }
   
-  // Если не нашли в URL скрипта, извлекаем из тегов <script> Метрики
   const scripts = document.getElementsByTagName('script');
   for (let script of scripts) {
     const src = script.src;
@@ -22,8 +20,7 @@ function getMetrikaCounterId() {
     }
   }
   
-  // Fallback ID, если ничего не нашли
-  return '88094270';
+  return '88094270'; // Fallback ID
 }
 
 // Инициализация переменных
@@ -31,6 +28,7 @@ let scrollDistance = 0;
 let startTime = Date.now();
 let userAgent = navigator.userAgent.toLowerCase();
 let screenRes = screen.width * screen.height;
+let lastScrollY = window.scrollY || 0; // Начальная позиция скролла
 
 // Функция проверки User-Agent на бота
 function isBotUserAgent() {
@@ -52,15 +50,18 @@ function checkCookies() {
 
 // Отслеживание скролла
 window.addEventListener('scroll', function() {
-  scrollDistance += Math.abs(window.scrollY - (window.scrollY || 0));
+  const currentScrollY = window.scrollY || 0;
+  const delta = Math.abs(currentScrollY - lastScrollY);
+  scrollDistance += delta;
+  console.log('Scroll event: Position =', currentScrollY, 'px, Delta =', delta, 'px');
+  lastScrollY = currentScrollY;
 });
 
 // Проверка параметров через 15 секунд
 setTimeout(function() {
   const timeOnPage = (Date.now() - startTime) / 1000;
-  const counterId = getMetrikaCounterId(); // Получаем ID счётчика
-  
-  let passedCount = 0; // Счётчик пройденных проверок для лога
+  const counterId = getMetrikaCounterId();
+  let passedCount = 0;
 
   if (typeof ym !== 'undefined') {
     // 1. Проверка User-Agent
@@ -91,12 +92,14 @@ setTimeout(function() {
     }
 
     // 4. Проверка скролла
-    if (scrollDistance > 100) {
+    const pageHeight = document.documentElement.scrollHeight;
+    const windowHeight = window.innerHeight;
+    if (scrollDistance > 50) {
       ym(counterId, 'reachGoal', 'check_scroll_passed', { distance: scrollDistance });
       console.log('Check Scroll: PASSED (Distance:', scrollDistance, 'px)');
       passedCount++;
     } else {
-      console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px)');
+      console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
     }
 
     // 5. Проверка куки
