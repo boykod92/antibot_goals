@@ -59,35 +59,57 @@ window.addEventListener('scroll', function() {
 setTimeout(function() {
   const timeOnPage = (Date.now() - startTime) / 1000;
   const counterId = getMetrikaCounterId(); // Получаем ID счётчика
+  
+  let passedCount = 0; // Счётчик пройденных проверок для лога
 
   if (typeof ym !== 'undefined') {
     // 1. Проверка User-Agent
     if (!isBotUserAgent()) {
       ym(counterId, 'reachGoal', 'check_user_agent_passed');
+      console.log('Check User-Agent: PASSED (User-Agent:', userAgent, ')');
+      passedCount++;
+    } else {
+      console.log('Check User-Agent: FAILED (User-Agent:', userAgent, ')');
     }
 
     // 2. Проверка разрешения экрана
     if (screen.width > 300 && screen.height > 300) {
       ym(counterId, 'reachGoal', 'check_screen_res_passed', { res: screenRes });
+      console.log('Check Screen Resolution: PASSED (Resolution:', screenRes, ')');
+      passedCount++;
+    } else {
+      console.log('Check Screen Resolution: FAILED (Resolution:', screenRes, ')');
     }
 
     // 3. Проверка времени на странице
     if (timeOnPage > 5) {
       ym(counterId, 'reachGoal', 'check_time_on_page_passed', { time: Math.round(timeOnPage) });
+      console.log('Check Time on Page: PASSED (Time:', Math.round(timeOnPage), 'sec)');
+      passedCount++;
+    } else {
+      console.log('Check Time on Page: FAILED (Time:', Math.round(timeOnPage), 'sec)');
     }
 
     // 4. Проверка скролла
     if (scrollDistance > 100) {
       ym(counterId, 'reachGoal', 'check_scroll_passed', { distance: scrollDistance });
+      console.log('Check Scroll: PASSED (Distance:', scrollDistance, 'px)');
+      passedCount++;
+    } else {
+      console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px)');
     }
 
     // 5. Проверка куки
     if (checkCookies()) {
       ym(counterId, 'reachGoal', 'check_cookies_passed');
+      console.log('Check Cookies: PASSED');
+      passedCount++;
+    } else {
+      console.log('Check Cookies: FAILED');
     }
 
-    console.log('Checks completed, events sent for counter ID:', counterId);
+    console.log('All checks completed. Passed:', passedCount + '/5', ', Events sent for counter ID:', counterId);
   } else {
-    console.error('Yandex Metrika not loaded');
+    console.error('Yandex Metrika not loaded. No events sent.');
   }
 }, 15000);
