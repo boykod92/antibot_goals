@@ -28,7 +28,7 @@ let scrollDistance = 0;
 let startTime = Date.now();
 let userAgent = navigator.userAgent.toLowerCase();
 let screenRes = screen.width * screen.height;
-let lastScrollY = window.scrollY || 0; // Начальная позиция скролла
+let lastScrollY = window.scrollY || 0;
 
 // Функция проверки User-Agent на бота
 function isBotUserAgent() {
@@ -38,14 +38,23 @@ function isBotUserAgent() {
          navigator.webdriver === true;
 }
 
-// Проверка куки: установка и чтение
-function checkCookies() {
+// Проверка куки: установка и асинхронная проверка
+function checkCookies(callback) {
   const cookieName = 'bot_check_cookie';
-  const cookieValue = 'test_value_' + Math.random();
+  const cookieValue = 'test_value_' + Math.random().toString(36).substring(2);
+  console.log('Check Cookies: Setting cookie', cookieName, '=', cookieValue);
+  
+  // Устанавливаем куки
   document.cookie = `${cookieName}=${cookieValue}; path=/; max-age=3600`;
-  const cookies = document.cookie.split('; ');
-  const foundCookie = cookies.find(row => row.startsWith(`${cookieName}=`));
-  return foundCookie && foundCookie.split('=')[1] === cookieValue;
+  
+  // Проверяем через 1 секунду
+  setTimeout(function() {
+    const cookies = document.cookie.split('; ');
+    const foundCookie = cookies.find(row => row.startsWith(`${cookieName}=`));
+    const isValid = foundCookie && foundCookie.split('=')[1] === cookieValue;
+    console.log('Check Cookies: Found cookie:', foundCookie || 'none', ', Valid:', isValid);
+    callback(isValid);
+  }, 1000); // 1 сек задержка для проверки
 }
 
 // Отслеживание скролла
@@ -94,24 +103,27 @@ setTimeout(function() {
     // 4. Проверка скролла
     const pageHeight = document.documentElement.scrollHeight;
     const windowHeight = window.innerHeight;
-    if (scrollDistance > 50) {
+    if (scrollDistance > 50 || pageHeight <= windowHeight) {
       ym(counterId, 'reachGoal', 'check_scroll_passed', { distance: scrollDistance });
-      console.log('Check Scroll: PASSED (Distance:', scrollDistance, 'px)');
+      console.log('Check Scroll: PASSED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
       passedCount++;
     } else {
       console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
     }
 
-    // 5. Проверка куки
-    if (checkCookies()) {
-      ym(counterId, 'reachGoal', 'check_cookies_passed');
-      console.log('Check Cookies: PASSED');
-      passedCount++;
-    } else {
-      console.log('Check Cookies: FAILED');
-    }
-
-    console.log('All checks completed. Passed:', passedCount + '/5', ', Events sent for counter ID:', counterId);
+    // 5. Проверка куки (асинхронно)
+    checkCookies(function(isValid) {
+      if (isValid) {
+        ym(counterId, 'reachGoal', 'check_cookies_passed');
+        console.log('Check Cookies: PASSED (Final check)');
+        passedCount++;
+      } else {
+        console.log('Check Cookies: FAILED (Final check)');
+      }
+      
+      // Финальный лог после всех проверок
+      console.log('All checks completed. Passed:', passedCount + '/5', ', Events sent for counter ID:', counterId);
+    });
   } else {
     console.error('Yandex Metrika not loaded. No events sent.');
   }
