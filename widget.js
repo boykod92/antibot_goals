@@ -1,3 +1,6 @@
+// Переключатель для отладки
+const debug = true; // Установите false для продакшена, чтобы убрать логи
+
 // Функция для извлечения ID счётчика Метрики
 function getMetrikaCounterId() {
   const currentScript = document.currentScript;
@@ -38,23 +41,23 @@ function isBotUserAgent() {
          navigator.webdriver === true;
 }
 
-// Проверка куки: установка и асинхронная проверка
-function checkCookies(callback) {
-  const cookieName = 'bot_check_cookie';
-  const cookieValue = 'test_value_' + Math.random().toString(36).substring(2);
-  console.log('Check Cookies: Setting cookie', cookieName, '=', cookieValue);
+// Проверка localStorage
+function checkStorage(callback) {
+  const storageKey = 'bot_check_storage';
+  const storageValue = 'test_value_' + Math.random().toString(36).substring(2);
+  if (debug) console.log('Check Storage: Attempting to set', storageKey, '=', storageValue);
   
-  // Устанавливаем куки
-  document.cookie = `${cookieName}=${cookieValue}; path=/; max-age=3600`;
-  
-  // Проверяем через 1 секунду
-  setTimeout(function() {
-    const cookies = document.cookie.split('; ');
-    const foundCookie = cookies.find(row => row.startsWith(`${cookieName}=`));
-    const isValid = foundCookie && foundCookie.split('=')[1] === cookieValue;
-    console.log('Check Cookies: Found cookie:', foundCookie || 'none', ', Valid:', isValid);
+  try {
+    localStorage.setItem(storageKey, storageValue);
+    const retrievedValue = localStorage.getItem(storageKey);
+    localStorage.removeItem(storageKey); // Очищаем после теста
+    const isValid = retrievedValue === storageValue;
+    if (debug) console.log('Check Storage: Retrieved value:', retrievedValue || 'none', ', Valid:', isValid);
     callback(isValid);
-  }, 1000); // 1 сек задержка для проверки
+  } catch (e) {
+    if (debug) console.log('Check Storage: FAILED due to error:', e.message);
+    callback(false);
+  }
 }
 
 // Отслеживание скролла
@@ -62,7 +65,6 @@ window.addEventListener('scroll', function() {
   const currentScrollY = window.scrollY || 0;
   const delta = Math.abs(currentScrollY - lastScrollY);
   scrollDistance += delta;
-  console.log('Scroll event: Position =', currentScrollY, 'px, Delta =', delta, 'px');
   lastScrollY = currentScrollY;
 });
 
@@ -76,53 +78,53 @@ setTimeout(function() {
     // 1. Проверка User-Agent
     if (!isBotUserAgent()) {
       ym(counterId, 'reachGoal', 'check_user_agent_passed');
-      console.log('Check User-Agent: PASSED (User-Agent:', userAgent, ')');
+      if (debug) console.log('Check User-Agent: PASSED (User-Agent:', userAgent, ')');
       passedCount++;
     } else {
-      console.log('Check User-Agent: FAILED (User-Agent:', userAgent, ')');
+      if (debug) console.log('Check User-Agent: FAILED (User-Agent:', userAgent, ')');
     }
 
     // 2. Проверка разрешения экрана
     if (screen.width > 300 && screen.height > 300) {
       ym(counterId, 'reachGoal', 'check_screen_res_passed', { res: screenRes });
-      console.log('Check Screen Resolution: PASSED (Resolution:', screenRes, ')');
+      if (debug) console.log('Check Screen Resolution: PASSED (Resolution:', screenRes, ')');
       passedCount++;
     } else {
-      console.log('Check Screen Resolution: FAILED (Resolution:', screenRes, ')');
+      if (debug) console.log('Check Screen Resolution: FAILED (Resolution:', screenRes, ')');
     }
 
     // 3. Проверка времени на странице
     if (timeOnPage > 5) {
       ym(counterId, 'reachGoal', 'check_time_on_page_passed', { time: Math.round(timeOnPage) });
-      console.log('Check Time on Page: PASSED (Time:', Math.round(timeOnPage), 'sec)');
+      if (debug) console.log('Check Time on Page: PASSED (Time:', Math.round(timeOnPage), 'sec)');
       passedCount++;
     } else {
-      console.log('Check Time on Page: FAILED (Time:', Math.round(timeOnPage), 'sec)');
+      if (debug) console.log('Check Time on Page: FAILED (Time:', Math.round(timeOnPage), 'sec)');
     }
 
     // 4. Проверка скролла
     const pageHeight = document.documentElement.scrollHeight;
     const windowHeight = window.innerHeight;
-    if (scrollDistance > 50 || pageHeight <= windowHeight) {
+    if (scrollDistance > 10 || pageHeight <= windowHeight) {
       ym(counterId, 'reachGoal', 'check_scroll_passed', { distance: scrollDistance });
-      console.log('Check Scroll: PASSED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
+      if (debug) console.log('Check Scroll: PASSED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
       passedCount++;
     } else {
-      console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
+      if (debug) console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
     }
 
-    // 5. Проверка куки (асинхронно)
-    checkCookies(function(isValid) {
+    // 5. Проверка localStorage
+    checkStorage(function(isValid) {
       if (isValid) {
-        ym(counterId, 'reachGoal', 'check_cookies_passed');
-        console.log('Check Cookies: PASSED (Final check)');
+        ym(counterId, 'reachGoal', 'check_storage_passed');
+        if (debug) console.log('Check Storage: PASSED (Final check)');
         passedCount++;
       } else {
-        console.log('Check Cookies: FAILED (Final check)');
+        if (debug) console.log('Check Storage: FAILED (Final check)');
       }
       
-      // Финальный лог после всех проверок
-      console.log('All checks completed. Passed:', passedCount + '/5', ', Events sent for counter ID:', counterId);
+      // Финальный лог
+      if (debug) console.log('All checks completed. Passed:', passedCount + '/5', ', Events sent for counter ID:', counterId);
     });
   } else {
     console.error('Yandex Metrika not loaded. No events sent.');
