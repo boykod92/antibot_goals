@@ -1,0 +1,93 @@
+// Функция для извлечения ID счётчика Метрики
+function getMetrikaCounterId() {
+  // Сначала пробуем извлечь из URL текущего скрипта (например, widget.js?id=88094270)
+  const currentScript = document.currentScript;
+  if (currentScript && currentScript.src) {
+    const url = new URL(currentScript.src);
+    const idFromUrl = url.searchParams.get('id');
+    if (idFromUrl && /^\d+$/.test(idFromUrl)) { // Проверяем, что ID — число
+      return idFromUrl;
+    }
+  }
+  
+  // Если не нашли в URL скрипта, извлекаем из тегов <script> Метрики
+  const scripts = document.getElementsByTagName('script');
+  for (let script of scripts) {
+    const src = script.src;
+    if (src && src.includes('yandex.ru/metrika')) {
+      const match = src.match(/id=(\d+)/);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+  }
+  
+  // Fallback ID, если ничего не нашли
+  return '88094270';
+}
+
+// Инициализация переменных
+let scrollDistance = 0;
+let startTime = Date.now();
+let userAgent = navigator.userAgent.toLowerCase();
+let screenRes = screen.width * screen.height;
+
+// Функция проверки User-Agent на бота
+function isBotUserAgent() {
+  return /bot|headless|spider|crawler|phantom|slurp|googlebot/i.test(userAgent) ||
+         /headlesschrome/i.test(userAgent) ||
+         userAgent.indexOf('mobile') > -1 && screenRes < 100000 ||
+         navigator.webdriver === true;
+}
+
+// Проверка куки: установка и чтение
+function checkCookies() {
+  const cookieName = 'bot_check_cookie';
+  const cookieValue = 'test_value_' + Math.random();
+  document.cookie = `${cookieName}=${cookieValue}; path=/; max-age=3600`;
+  const cookies = document.cookie.split('; ');
+  const foundCookie = cookies.find(row => row.startsWith(`${cookieName}=`));
+  return foundCookie && foundCookie.split('=')[1] === cookieValue;
+}
+
+// Отслеживание скролла
+window.addEventListener('scroll', function() {
+  scrollDistance += Math.abs(window.scrollY - (window.scrollY || 0));
+});
+
+// Проверка параметров через 15 секунд
+setTimeout(function() {
+  const timeOnPage = (Date.now() - startTime) / 1000;
+  const counterId = getMetrikaCounterId(); // Получаем ID счётчика
+
+  if (typeof ym !== 'undefined') {
+    // 1. Проверка User-Agent
+    if (!isBotUserAgent()) {
+      ym(counterId, 'reachGoal', 'check_user_agent_passed');
+    }
+
+    // 2. Проверка разрешения экрана
+    if (screen.width > 300 && screen.height > 300) {
+      ym(counterId, 'reachGoal', 'check_screen_res_passed', { res: screenRes });
+    }
+
+    // 3. Проверка времени на странице
+    if (timeOnPage > 5) {
+      ym(counterId, 'reachGoal', 'check_time_on_page_passed', { time: Math.round(timeOnPage) });
+    }
+
+    // 4. Проверка скролла
+    if (scrollDistance > 100) {
+      ym(counterId, 'reachGoal', 'check_scroll_passed', { distance: scrollDistance });
+    }
+
+    // 5. Проверка куки
+    if (checkCookies()) {
+      ym(counterId, 'reachGoal', 'check_cookies_passed');
+    }
+
+    console.log('Checks completed, events sent for counter ID:', counterId);
+  } else {
+    console.error('Yandex Metrika not loaded');
+  }
+}, 15000);
