@@ -6,7 +6,7 @@
 2. Добавьте скрипт:
    ```html
    <script src="https://antibot_goals.vercel.app/widget.js?id=YOUR_METRIKA_ID"></script>
-3. Создайте составную цель - real_user_composite: check_user_agent_passed, check_screen_res_passed, check_time_on_page_passed, check_scroll_passed, check_cookies_passed.
+3. Создайте составную цель - real_user_composite: check_user_agent_passed, check_screen_res_passed, check_time_on_page_passed, check_scroll_passed, check_storage_passed.
    
 ## Что делает? 
 Запускается через 15 секунд после загрузки страницы (даёт время на взаимодействие).
