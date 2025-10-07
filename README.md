@@ -35,6 +35,7 @@ check_canvas_passed
 Лог: Check Canvas: PASSED (Final check) или FAILED (DataURL length: X, Valid: false).
 
 all_checks_passed
+
 если все 5 проверок (check_user_agent_passed, check_screen_res_passed, check_time_on_page_passed, check_scroll_passed, check_canvas_passed) успешно пройдены, то есть passedCount === 5. Это усилит контроль качества трафика, так как событие будет сигнализировать о "100% реальном пользователе", что идеально для Яндекс.Директа (например, для стратегии "Оплата за конверсии"). all_checks_passed, будет отправляться после всех проверок, если passedCount === 5.
 
 
