@@ -41,23 +41,36 @@ function isBotUserAgent() {
          navigator.webdriver === true;
 }
 
-// Проверка localStorage
-function checkStorage(callback) {
-  const storageKey = 'bot_check_storage';
-  const storageValue = 'test_value_' + Math.random().toString(36).substring(2);
-  if (debug) console.log('Check Storage: Attempting to set', storageKey, '=', storageValue);
+// Проверка Canvas fingerprint
+function checkCanvas(callback) {
+  if (debug) console.log('Check Canvas: Starting fingerprint generation');
   
-  try {
-    localStorage.setItem(storageKey, storageValue);
-    const retrievedValue = localStorage.getItem(storageKey);
-    localStorage.removeItem(storageKey); // Очищаем после теста
-    const isValid = retrievedValue === storageValue;
-    if (debug) console.log('Check Storage: Retrieved value:', retrievedValue || 'none', ', Valid:', isValid);
-    callback(isValid);
-  } catch (e) {
-    if (debug) console.log('Check Storage: FAILED due to error:', e.message);
+  const canvas = document.createElement('canvas');
+  canvas.width = 200;
+  canvas.height = 100;
+  const ctx = canvas.getContext('2d');
+  
+  if (!ctx) {
+    if (debug) console.log('Check Canvas: FAILED (No context)');
     callback(false);
+    return;
   }
+  
+  // Рисуем тестовый контент (текст + цвета)
+  ctx.textBaseline = 'top';
+  ctx.font = '14px Arial';
+  ctx.fillStyle = '#f60';
+  ctx.fillRect(125, 1, 62, 20);
+  ctx.fillStyle = '#069';
+  ctx.fillText('🦊 Hello, world!', 2, 15);
+  ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
+  ctx.fillText('🦊 Hello, world!', 4, 17);
+  
+  const dataURL = canvas.toDataURL();
+  const isValid = dataURL.length > 1000 && dataURL !== 'data:,'; // Проверяем длину и не пустоту
+  
+  if (debug) console.log('Check Canvas: DataURL length:', dataURL.length, ', Valid:', isValid);
+  callback(isValid);
 }
 
 // Отслеживание скролла
@@ -113,14 +126,14 @@ setTimeout(function() {
       if (debug) console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
     }
 
-    // 5. Проверка localStorage
-    checkStorage(function(isValid) {
+    // 5. Проверка Canvas
+    checkCanvas(function(isValid) {
       if (isValid) {
-        ym(counterId, 'reachGoal', 'check_storage_passed');
-        if (debug) console.log('Check Storage: PASSED (Final check)');
+        ym(counterId, 'reachGoal', 'check_canvas_passed');
+        if (debug) console.log('Check Canvas: PASSED (Final check)');
         passedCount++;
       } else {
-        if (debug) console.log('Check Storage: FAILED (Final check)');
+        if (debug) console.log('Check Canvas: FAILED (Final check)');
       }
       
       // Финальный лог
