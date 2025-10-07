@@ -32,7 +32,6 @@ let startTime = Date.now();
 let userAgent = navigator.userAgent.toLowerCase();
 let screenRes = screen.width * screen.height;
 let lastScrollY = window.scrollY || 0;
-let scrollDetected = false; // Флаг для отслеживания событий скролла
 
 // Функция проверки User-Agent на бота
 function isBotUserAgent() {
@@ -79,7 +78,6 @@ window.addEventListener('scroll', function() {
   const delta = Math.abs(currentScrollY - lastScrollY);
   scrollDistance += delta;
   lastScrollY = currentScrollY;
-  scrollDetected = true;
   if (debug) console.log('Window Scroll: Position =', currentScrollY, 'px, Delta =', delta, 'px');
 });
 
@@ -91,7 +89,6 @@ function trackContainerScroll() {
       const delta = Math.abs(el.scrollTop - (el.dataset.lastScrollTop || 0));
       scrollDistance += delta;
       el.dataset.lastScrollTop = el.scrollTop;
-      scrollDetected = true;
       if (debug) console.log('Container Scroll: Element =', el.tagName, ', ScrollTop =', el.scrollTop, 'px, Delta =', delta, 'px');
     });
   });
@@ -103,7 +100,6 @@ window.addEventListener('touchmove', function() {
   const delta = Math.abs(currentScrollY - lastScrollY);
   scrollDistance += delta;
   lastScrollY = currentScrollY;
-  scrollDetected = true;
   if (debug) console.log('Touchmove: Position =', currentScrollY, 'px, Delta =', delta, 'px');
 });
 
@@ -126,13 +122,16 @@ setTimeout(function() {
       if (debug) console.log('Check User-Agent: FAILED (User-Agent:', userAgent, ')');
     }
 
-    // 2. Проверка разрешения экрана
-    if (screen.width > 300 && screen.height > 300) {
+    // 2. Проверка разрешения экрана с фильтром подозрительных
+    const suspiciousRes = [0, 320, 360, 385, 390, 393, 412, 414, 480, 1366, 1920]; // Ширины неопределённых, эмуляторов и дешёвых устройств
+    const isUndefined = screen.width <= 0 || screen.height <= 0;
+    const isSuspicious = suspiciousRes.includes(screen.width);
+    if (screen.width > 300 && screen.height > 300 && !isUndefined && !isSuspicious) {
       ym(counterId, 'reachGoal', 'check_screen_res_passed', { res: screenRes });
       if (debug) console.log('Check Screen Resolution: PASSED (Resolution:', screenRes, ')');
       passedCount++;
     } else {
-      if (debug) console.log('Check Screen Resolution: FAILED (Resolution:', screenRes, ')');
+      if (debug) console.log('Check Screen Resolution: FAILED (Resolution:', screenRes, ', Undefined:', isUndefined, ', Suspicious:', isSuspicious, ')');
     }
 
     // 3. Проверка времени на странице
@@ -149,10 +148,10 @@ setTimeout(function() {
     const windowHeight = window.innerHeight;
     if (scrollDistance > 10 || pageHeight <= windowHeight) {
       ym(counterId, 'reachGoal', 'check_scroll_passed', { distance: scrollDistance });
-      if (debug) console.log('Check Scroll: PASSED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px, Scroll detected:', scrollDetected, ')');
+      if (debug) console.log('Check Scroll: PASSED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
       passedCount++;
     } else {
-      if (debug) console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px, Scroll detected:', scrollDetected, ')');
+      if (debug) console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
     }
 
     // 5. Проверка Canvas
