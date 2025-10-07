@@ -32,6 +32,7 @@ let startTime = Date.now();
 let userAgent = navigator.userAgent.toLowerCase();
 let screenRes = screen.width * screen.height;
 let lastScrollY = window.scrollY || 0;
+let scrollDetected = false; // Флаг для отслеживания событий скролла
 
 // Функция проверки User-Agent на бота
 function isBotUserAgent() {
@@ -56,7 +57,6 @@ function checkCanvas(callback) {
     return;
   }
   
-  // Рисуем тестовый контент (текст + цвета)
   ctx.textBaseline = 'top';
   ctx.font = '14px Arial';
   ctx.fillStyle = '#f60';
@@ -73,15 +73,44 @@ function checkCanvas(callback) {
   callback(isValid);
 }
 
-// Отслеживание скролла
+// Отслеживание скролла на window
 window.addEventListener('scroll', function() {
   const currentScrollY = window.scrollY || 0;
   const delta = Math.abs(currentScrollY - lastScrollY);
   scrollDistance += delta;
   lastScrollY = currentScrollY;
+  scrollDetected = true;
+  if (debug) console.log('Window Scroll: Position =', currentScrollY, 'px, Delta =', delta, 'px');
 });
 
-// Проверка параметров через 15 секунд
+// Отслеживание скролла внутри контейнеров
+function trackContainerScroll() {
+  const scrollableElements = document.querySelectorAll('[style*="overflow"], [style*="scroll"], [style*="auto"]');
+  scrollableElements.forEach(el => {
+    el.addEventListener('scroll', function() {
+      const delta = Math.abs(el.scrollTop - (el.dataset.lastScrollTop || 0));
+      scrollDistance += delta;
+      el.dataset.lastScrollTop = el.scrollTop;
+      scrollDetected = true;
+      if (debug) console.log('Container Scroll: Element =', el.tagName, ', ScrollTop =', el.scrollTop, 'px, Delta =', delta, 'px');
+    });
+  });
+}
+
+// Отслеживание touchmove для мобильных
+window.addEventListener('touchmove', function() {
+  const currentScrollY = window.scrollY || 0;
+  const delta = Math.abs(currentScrollY - lastScrollY);
+  scrollDistance += delta;
+  lastScrollY = currentScrollY;
+  scrollDetected = true;
+  if (debug) console.log('Touchmove: Position =', currentScrollY, 'px, Delta =', delta, 'px');
+});
+
+// Инициализация контейнерного скролла
+trackContainerScroll();
+
+// Проверка параметров через 20 секунд
 setTimeout(function() {
   const timeOnPage = (Date.now() - startTime) / 1000;
   const counterId = getMetrikaCounterId();
@@ -120,10 +149,10 @@ setTimeout(function() {
     const windowHeight = window.innerHeight;
     if (scrollDistance > 10 || pageHeight <= windowHeight) {
       ym(counterId, 'reachGoal', 'check_scroll_passed', { distance: scrollDistance });
-      if (debug) console.log('Check Scroll: PASSED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
+      if (debug) console.log('Check Scroll: PASSED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px, Scroll detected:', scrollDetected, ')');
       passedCount++;
     } else {
-      if (debug) console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
+      if (debug) console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px, Scroll detected:', scrollDetected, ')');
     }
 
     // 5. Проверка Canvas
@@ -147,4 +176,4 @@ setTimeout(function() {
   } else {
     console.error('Yandex Metrika not loaded. No events sent.');
   }
-}, 15000);
+}, 20000);
