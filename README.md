@@ -6,21 +6,54 @@
 2. Добавьте скрипт:
    ```html
    <script src="https://antibot_goals.vercel.app/widget.js?id=YOUR_METRIKA_ID"></script>
-3. Создайте составную цель - real_user_composite: check_user_agent_passed, check_screen_res_passed, check_time_on_page_passed, check_scroll_passed, check_storage_passed.
+
+3. Список событий
+
+check_user_agent_passed
+
+Что проверяет: Проверяет строку User-Agent на наличие признаков ботов (ключевые слова: "bot", "headless", "spider", "crawler", "phantom", "slurp", "googlebot", "headlesschrome") или подозрительных комбинаций (мобильный User-Agent с разрешением <100000 пикселей, navigator.webdriver).
+Когда отправляется: Если User-Agent не похож на бота.
+Лог в консоли (если debug = true): Check User-Agent: PASSED (User-Agent: ...) или FAILED.
+
+
+check_screen_res_passed
+
+Что проверяет: Проверяет разрешение экрана (screen.width > 300 && screen.height > 300). Это отсекает устройства с аномально маленькими экранами (например, старые эмуляторы или боты).
+Когда отправляется: Если ширина и высота экрана больше 300 пикселей. Также передаёт параметр { res: screen.width * screen.height }.
+Лог: Check Screen Resolution: PASSED (Resolution: ...) или FAILED.
+
+
+check_time_on_page_passed
+
+Что проверяет: Проверяет время нахождения на странице (timeOnPage > 5 секунд).
+Когда отправляется: Если пользователь провёл на странице более 5 секунд. Передаёт параметр { time: Math.round(timeOnPage) }.
+Лог: Check Time on Page: PASSED (Time: X sec) или FAILED.
+
+
+check_scroll_passed
+
+Что проверяет: Проверяет расстояние скролла (scrollDistance > 10 пикселей) или короткую страницу (pageHeight <= windowHeight). Это учитывает случаи, когда страница не требует скролла (например, лендинги).
+Когда отправляется: Если пользователь прокрутил >10 пикселей или страница короче высоты окна. Передаёт { distance: scrollDistance }.
+Лог: Check Scroll: PASSED (Distance: X px, Page height: Y px, Window height: Z px) или FAILED.
+
+
+check_canvas_passed
+
+Что проверяет: Проверяет возможность рендеринга HTML5 Canvas (рисует невидимый элемент с текстом и цветами, получает toDataURL()). Отсекает headless-браузеры (Selenium, Puppeteer), которые не рендерят графику или возвращают пустой Canvas.
+Когда отправляется: Если Canvas рендерится корректно (dataURL.length > 1000 && dataURL !== 'data:,').
+Лог: Check Canvas: PASSED (Final check) или FAILED (DataURL length: X, Valid: false).
+
+
+
+Составная цель
+
+Название: real_user_composite
+Тип: Составная цель
+Шаги (в порядке выполнения):
+
+check_user_agent_passed
+check_screen_res_passed
+check_time_on_page_passed
+check_scroll_passed
+check_canvas_passed
    
-## Что делает? 
-Запускается через 15 секунд после загрузки страницы (даёт время на взаимодействие).
-Вычисляет timeOnPage (время на странице).
-Получает ID счётчика (counterId).
-Инициализирует счётчик пройденных проверок (passedCount = 0).
-Проверяет наличие ym (функции Метрики) — если нет, выводит ошибку в консоль.
-Запускает 5 проверок последовательно:
-
-1. User-Agent: Если не бот (!isBotUserAgent()), отправляет событие check_user_agent_passed, логирует PASSED/FAILED (если debug), увеличивает passedCount.
-2. Разрешение экрана: Если ширина >300 и высота >300, отправляет check_screen_res_passed с параметром { res: screenRes }, логирует, увеличивает passedCount.
-3. Время на странице: Если >5 сек, отправляет check_time_on_page_passed с { time: ... }, логирует, увеличивает passedCount.
-4. Скролл: Вычисляет высоту страницы (pageHeight) и окна (windowHeight). Если расстояние скролла >10 px или страница короткая (pageHeight <= windowHeight), отправляет check_scroll_passed с { distance: ... }, логирует с деталями высоты, увеличивает passedCount.
-5. localStorage: Вызывает checkStorage, и если прошла, отправляет check_storage_passed, логирует PASSED/FAILED, увеличивает passedCount.
-
-
-После всех проверок логирует итог: All checks completed. Passed: X/5, Events sent for counter ID: Y (если debug).
