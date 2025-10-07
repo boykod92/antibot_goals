@@ -67,7 +67,7 @@ function checkCanvas(callback) {
   ctx.fillText('🦊 Hello, world!', 4, 17);
   
   const dataURL = canvas.toDataURL();
-  const isValid = dataURL.length > 1000 && dataURL !== 'data:,'; // Проверяем длину и не пустоту
+  const isValid = dataURL.length > 1000 && dataURL !== 'data:,';
   
   if (debug) console.log('Check Canvas: DataURL length:', dataURL.length, ', Valid:', isValid);
   callback(isValid);
@@ -136,8 +136,13 @@ setTimeout(function() {
         if (debug) console.log('Check Canvas: FAILED (Final check)');
       }
       
-      // Финальный лог
+      // Финальный лог и отправка события all_checks_passed
       if (debug) console.log('All checks completed. Passed:', passedCount + '/5', ', Events sent for counter ID:', counterId);
+      
+      if (passedCount === 5) {
+        ym(counterId, 'reachGoal', 'all_checks_passed');
+        if (debug) console.log('All 5 checks passed: Sending all_checks_passed event');
+      }
     });
   } else {
     console.error('Yandex Metrika not loaded. No events sent.');
