@@ -30,14 +30,15 @@ function getMetrikaCounterId() {
 let scrollDistance = 0;
 let startTime = Date.now();
 let userAgent = navigator.userAgent.toLowerCase();
-let screenRes = screen.width * screen.height;
+let screenWidth = screen.width;
+let screenHeight = screen.height;
 let lastScrollY = window.scrollY || 0;
 
 // Функция проверки User-Agent на бота
 function isBotUserAgent() {
   return /bot|headless|spider|crawler|phantom|slurp|googlebot/i.test(userAgent) ||
          /headlesschrome/i.test(userAgent) ||
-         userAgent.indexOf('mobile') > -1 && screenRes < 100000 ||
+         userAgent.indexOf('mobile') > -1 && screenWidth * screenHeight < 100000 ||
          navigator.webdriver === true;
 }
 
@@ -106,7 +107,7 @@ window.addEventListener('touchmove', function() {
 // Инициализация контейнерного скролла
 trackContainerScroll();
 
-// Проверка параметров через 20 секунд
+// Проверка параметров через 10 секунд
 setTimeout(function() {
   const timeOnPage = (Date.now() - startTime) / 1000;
   const counterId = getMetrikaCounterId();
@@ -122,16 +123,42 @@ setTimeout(function() {
       if (debug) console.log('Check User-Agent: FAILED (User-Agent:', userAgent, ')');
     }
 
-    // 2. Проверка разрешения экрана с фильтром подозрительных
-    const suspiciousRes = [0, 320, 360, 480, 1366, 1920]; // Только явные эмуляторы/боты и дешёвые до 10к руб.
-    const isUndefined = screen.width <= 0 || screen.height <= 0;
-    const isSuspicious = suspiciousRes.includes(screen.width);
-    if (screen.width > 300 && screen.height > 300 && !isUndefined && !isSuspicious) {
-      ym(counterId, 'reachGoal', 'check_screen_res_passed', { res: screenRes });
-      if (debug) console.log('Check Screen Resolution: PASSED (Resolution:', screenRes, ')');
+    // 2. Проверка контекста устройства (новый фильтр)
+    function checkDeviceContext() {
+      // Соотношение сторон (aspect ratio)
+      const aspectRatio = screenWidth / screenHeight;
+      const isWeirdAspect = aspectRatio < 1.2 || aspectRatio > 2.2; // Реальные устройства: 16:9 (~1.78) или 19.5:9 (~2.16)
+
+      // Проверка согласованности с User-Agent
+      const isMobile = /android|iphone|ipad|mobile/i.test(userAgent);
+      const isDesktopLike = screenWidth >= 1366 || screenHeight >= 768;
+      const isMismatch = isMobile && isDesktopLike;
+
+      // Оценка взаимодействия (время и скролл)
+      const expectedScroll = Math.max(50, screenHeight * 0.1); // Ожидаемый скролл: минимум 50px или 10% высоты
+      const isLowInteraction = timeOnPage < 5 || scrollDistance < expectedScroll;
+
+      // Проверка доступности WebGL (боты часто эмулируют плохо)
+      let hasWebGL = false;
+      try {
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        hasWebGL = !!gl;
+      } catch (e) {
+        hasWebGL = false;
+      }
+
+      const isSuspicious = isWeirdAspect || isMismatch || isLowInteraction || !hasWebGL;
+      return !isSuspicious;
+    }
+
+    const isValidDevice = checkDeviceContext();
+    if (isValidDevice) {
+      ym(counterId, 'reachGoal', 'check_device_context_passed', { width: screenWidth, height: screenHeight, time: Math.round(timeOnPage), scroll: scrollDistance });
+      if (debug) console.log('Check Device Context: PASSED (Width:', screenWidth, 'Height:', screenHeight, 'Time:', Math.round(timeOnPage), 'sec, Scroll:', scrollDistance, 'px)');
       passedCount++;
     } else {
-      if (debug) console.log('Check Screen Resolution: FAILED (Resolution:', screenRes, ', Undefined:', isUndefined, ', Suspicious:', isSuspicious, ')');
+      if (debug) console.log('Check Device Context: FAILED (Width:', screenWidth, 'Height:', screenHeight, 'Time:', Math.round(timeOnPage), 'sec, Scroll:', scrollDistance, 'px)');
     }
 
     // 3. Проверка времени на странице
@@ -175,4 +202,4 @@ setTimeout(function() {
   } else {
     console.error('Yandex Metrika not loaded. No events sent.');
   }
-}, 20000);
+}, 10000);
