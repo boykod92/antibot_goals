@@ -90,27 +90,6 @@ document.body.addEventListener('scroll', function(e) {
   if (debug) console.log('Body Scroll: Position =', currentScrollY, 'px, Delta =', delta, 'px');
 });
 
-// Отслеживание скролла внутри контейнеров
-function trackContainerScroll() {
-  const scrollableElements = document.querySelectorAll('[style*="overflow"], [style*="scroll"], [style*="auto"]');
-  if (!scrollableElements || scrollableElements.length === 0) {
-    if (debug) console.log('No scrollable elements found with [style*="overflow"], [style*="scroll"], [style*="auto"]');
-    return;
-  }
-  scrollableElements.forEach(el => {
-    if (el && typeof el.addEventListener === 'function') {
-      el.addEventListener('scroll', function() {
-        const delta = Math.abs(el.scrollTop - (el.dataset.lastScrollTop || 0));
-        scrollDistance += delta;
-        el.dataset.lastScrollTop = el.scrollTop;
-        if (debug) console.log('Container Scroll: Element =', el.tagName, ', ScrollTop =', el.scrollTop, 'px, Delta =', delta, 'px');
-      }, { passive: true });
-    } else {
-      if (debug) console.log('Skipping invalid element:', el);
-    }
-  });
-}
-
 // Отслеживание touchmove для мобильных
 window.addEventListener('touchmove', function() {
   const currentScrollY = window.scrollY || 0;
@@ -122,7 +101,8 @@ window.addEventListener('touchmove', function() {
 
 // Запуск после загрузки DOM
 document.addEventListener('DOMContentLoaded', function() {
-  trackContainerScroll();
+  // trackContainerScroll временно отключён из-за ошибок
+  if (debug) console.log('DOM fully loaded, starting checks');
 
   // Проверка параметров через 7 секунд
   setTimeout(function() {
