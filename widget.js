@@ -73,13 +73,21 @@ function checkCanvas(callback) {
   callback(isValid);
 }
 
-// Отслеживание скролла на window
+// Отслеживание скролла на window и body
 window.addEventListener('scroll', function() {
   const currentScrollY = window.scrollY || 0;
   const delta = Math.abs(currentScrollY - lastScrollY);
   scrollDistance += delta;
   lastScrollY = currentScrollY;
   if (debug) console.log('Window Scroll: Position =', currentScrollY, 'px, Delta =', delta, 'px');
+});
+
+document.body.addEventListener('scroll', function(e) {
+  const currentScrollY = e.target.scrollTop || 0;
+  const delta = Math.abs(currentScrollY - lastScrollY);
+  scrollDistance += delta;
+  lastScrollY = currentScrollY;
+  if (debug) console.log('Body Scroll: Position =', currentScrollY, 'px, Delta =', delta, 'px');
 });
 
 // Отслеживание скролла внутри контейнеров
@@ -91,7 +99,7 @@ function trackContainerScroll() {
       scrollDistance += delta;
       el.dataset.lastScrollTop = el.scrollTop;
       if (debug) console.log('Container Scroll: Element =', el.tagName, ', ScrollTop =', el.scrollTop, 'px, Delta =', delta, 'px');
-    });
+    }, { passive: true });
   });
 }
 
@@ -107,7 +115,7 @@ window.addEventListener('touchmove', function() {
 // Инициализация контейнерного скролла
 trackContainerScroll();
 
-// Проверка параметров через 10 секунд
+// Проверка параметров через 7 секунд
 setTimeout(function() {
   const timeOnPage = (Date.now() - startTime) / 1000;
   const counterId = getMetrikaCounterId();
@@ -123,11 +131,11 @@ setTimeout(function() {
       if (debug) console.log('Check User-Agent: FAILED (User-Agent:', userAgent, ')');
     }
 
-    // 2. Проверка контекста устройства (новый фильтр)
+    // 2. Проверка контекста устройства (обновлённый фильтр)
     function checkDeviceContext() {
       // Соотношение сторон (aspect ratio)
       const aspectRatio = screenWidth / screenHeight;
-      const isWeirdAspect = aspectRatio < 1.2 || aspectRatio > 2.2; // Реальные устройства: 16:9 (~1.78) или 19.5:9 (~2.16)
+      const isWeirdAspect = aspectRatio < 1.5 || aspectRatio > 2.5; // Расширенный диапазон для реальных устройств
 
       // Проверка согласованности с User-Agent
       const isMobile = /android|iphone|ipad|mobile/i.test(userAgent);
@@ -135,20 +143,21 @@ setTimeout(function() {
       const isMismatch = isMobile && isDesktopLike;
 
       // Оценка взаимодействия (время и скролл)
-      const expectedScroll = Math.max(50, screenHeight * 0.1); // Ожидаемый скролл: минимум 50px или 10% высоты
-      const isLowInteraction = timeOnPage < 5 || scrollDistance < expectedScroll;
+      const expectedScroll = Math.max(30, screenHeight * 0.05); // Уменьшен до 5% высоты или 30px
+      const isLowInteraction = timeOnPage < 3 || scrollDistance < expectedScroll;
 
-      // Проверка доступности WebGL (боты часто эмулируют плохо)
-      let hasWebGL = false;
+      // Проверка WebGL (необязательно, если ошибка — не проваливает)
+      let hasWebGL = true;
       try {
         const canvas = document.createElement('canvas');
         const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
         hasWebGL = !!gl;
       } catch (e) {
-        hasWebGL = false;
+        if (debug) console.log('WebGL check error:', e.message);
+        hasWebGL = true; // Игнорируем ошибку
       }
 
-      const isSuspicious = isWeirdAspect || isMismatch || isLowInteraction || !hasWebGL;
+      const isSuspicious = isWeirdAspect || isMismatch || isLowInteraction;
       return !isSuspicious;
     }
 
@@ -158,11 +167,11 @@ setTimeout(function() {
       if (debug) console.log('Check Device Context: PASSED (Width:', screenWidth, 'Height:', screenHeight, 'Time:', Math.round(timeOnPage), 'sec, Scroll:', scrollDistance, 'px)');
       passedCount++;
     } else {
-      if (debug) console.log('Check Device Context: FAILED (Width:', screenWidth, 'Height:', screenHeight, 'Time:', Math.round(timeOnPage), 'sec, Scroll:', scrollDistance, 'px)');
+      if (debug) console.log('Check Device Context: FAILED (Width:', screenWidth, 'Height:', screenHeight, 'Time:', Math.round(timeOnPage), 'sec, Scroll:', scrollDistance, 'px, WeirdAspect:', aspectRatio, 'Mismatch:', isMismatch, 'LowInteraction:', isLowInteraction, ')');
     }
 
     // 3. Проверка времени на странице
-    if (timeOnPage > 5) {
+    if (timeOnPage > 3) { // Уменьшено с 5 до 3 сек для мягкости
       ym(counterId, 'reachGoal', 'check_time_on_page_passed', { time: Math.round(timeOnPage) });
       if (debug) console.log('Check Time on Page: PASSED (Time:', Math.round(timeOnPage), 'sec)');
       passedCount++;
@@ -202,4 +211,4 @@ setTimeout(function() {
   } else {
     console.error('Yandex Metrika not loaded. No events sent.');
   }
-}, 10000);
+}, 7000);
