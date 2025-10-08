@@ -123,7 +123,7 @@ setTimeout(function() {
     }
 
     // 2. Проверка разрешения экрана с фильтром подозрительных
-    const suspiciousRes = [0, 320, 360, 385, 390, 393, 412, 414, 480, 1366, 1920]; // Ширины неопределённых, эмуляторов и дешёвых устройств
+    const suspiciousRes = [0, 320, 360, 480, 1366, 1920]; // Только явные эмуляторы/боты и дешёвые до 10к руб.
     const isUndefined = screen.width <= 0 || screen.height <= 0;
     const isSuspicious = suspiciousRes.includes(screen.width);
     if (screen.width > 300 && screen.height > 300 && !isUndefined && !isSuspicious) {
