@@ -32,7 +32,7 @@ let startTime = Date.now();
 let userAgent = navigator.userAgent.toLowerCase();
 let screenWidth = screen.width;
 let screenHeight = screen.height;
-let lastScrollY = window.scrollY || 0;
+let lastScrollY = window?.scrollY || 0;
 
 // Функция проверки User-Agent на бота
 function isBotUserAgent() {
@@ -73,35 +73,49 @@ function checkCanvas(callback) {
   callback(isValid);
 }
 
-// Отслеживание скролла на window и body
-window.addEventListener('scroll', function() {
-  const currentScrollY = window.scrollY || 0;
-  const delta = Math.abs(currentScrollY - lastScrollY);
-  scrollDistance += delta;
-  lastScrollY = currentScrollY;
-  if (debug) console.log('Window Scroll: Position =', currentScrollY, 'px, Delta =', delta, 'px');
-});
+// Инициализация слушателей после загрузки DOM
+function initEventListeners() {
+  if (window && typeof window.addEventListener === 'function') {
+    window.addEventListener('scroll', function() {
+      const currentScrollY = window.scrollY || 0;
+      const delta = Math.abs(currentScrollY - lastScrollY);
+      scrollDistance += delta;
+      lastScrollY = currentScrollY;
+      if (debug) console.log('Window Scroll: Position =', currentScrollY, 'px, Delta =', delta, 'px');
+    });
+  } else {
+    if (debug) console.log('Window not available for scroll listener');
+  }
 
-document.body.addEventListener('scroll', function(e) {
-  const currentScrollY = e.target.scrollTop || 0;
-  const delta = Math.abs(currentScrollY - lastScrollY);
-  scrollDistance += delta;
-  lastScrollY = currentScrollY;
-  if (debug) console.log('Body Scroll: Position =', currentScrollY, 'px, Delta =', delta, 'px');
-});
+  if (document.body && typeof document.body.addEventListener === 'function') {
+    document.body.addEventListener('scroll', function(e) {
+      const currentScrollY = e.target.scrollTop || 0;
+      const delta = Math.abs(currentScrollY - lastScrollY);
+      scrollDistance += delta;
+      lastScrollY = currentScrollY;
+      if (debug) console.log('Body Scroll: Position =', currentScrollY, 'px, Delta =', delta, 'px');
+    });
+  } else {
+    if (debug) console.log('Body not available for scroll listener');
+  }
 
-// Отслеживание touchmove для мобильных
-window.addEventListener('touchmove', function() {
-  const currentScrollY = window.scrollY || 0;
-  const delta = Math.abs(currentScrollY - lastScrollY);
-  scrollDistance += delta;
-  lastScrollY = currentScrollY;
-  if (debug) console.log('Touchmove: Position =', currentScrollY, 'px, Delta =', delta, 'px');
-});
+  if (window && typeof window.addEventListener === 'function') {
+    window.addEventListener('touchmove', function() {
+      const currentScrollY = window.scrollY || 0;
+      const delta = Math.abs(currentScrollY - lastScrollY);
+      scrollDistance += delta;
+      lastScrollY = currentScrollY;
+      if (debug) console.log('Touchmove: Position =', currentScrollY, 'px, Delta =', delta, 'px');
+    });
+  } else {
+    if (debug) console.log('Window not available for touchmove listener');
+  }
+}
 
 // Запуск после загрузки DOM
 document.addEventListener('DOMContentLoaded', function() {
-  if (debug) console.log('DOM fully loaded, starting checks');
+  if (debug) console.log('DOM fully loaded, initializing event listeners');
+  initEventListeners();
 
   // Проверка параметров через 7 секунд
   setTimeout(function() {
