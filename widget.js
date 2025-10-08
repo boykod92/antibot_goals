@@ -101,7 +101,6 @@ window.addEventListener('touchmove', function() {
 
 // Запуск после загрузки DOM
 document.addEventListener('DOMContentLoaded', function() {
-  // trackContainerScroll временно отключён из-за ошибок
   if (debug) console.log('DOM fully loaded, starting checks');
 
   // Проверка параметров через 7 секунд
@@ -120,71 +119,54 @@ document.addEventListener('DOMContentLoaded', function() {
         if (debug) console.log('Check User-Agent: FAILED (User-Agent:', userAgent, ')');
       }
 
-      // 2. Проверка контекста устройства
-      function checkDeviceContext() {
-        // Соотношение сторон (aspect ratio)
-        const aspectRatio = screenWidth / screenHeight;
-        const isWeirdAspect = aspectRatio < 1.5 || aspectRatio > 2.5;
-
-        // Проверка согласованности с User-Agent
-        const isMobile = /android|iphone|ipad|mobile/i.test(userAgent);
-        const isDesktopLike = screenWidth >= 1366 || screenHeight >= 768;
-        const isMismatch = isMobile && isDesktopLike;
-
-        // Оценка взаимодействия
-        const expectedScroll = Math.max(30, screenHeight * 0.05);
-        const isLowInteraction = timeOnPage < 3 || scrollDistance < expectedScroll;
-
-        const isSuspicious = isWeirdAspect || isMismatch || isLowInteraction;
-        return !isSuspicious;
-      }
-
-      const isValidDevice = checkDeviceContext();
-      if (isValidDevice) {
-        ym(counterId, 'reachGoal', 'check_device_context_passed', { width: screenWidth, height: screenHeight, time: Math.round(timeOnPage), scroll: scrollDistance });
-        if (debug) console.log('Check Device Context: PASSED (Width:', screenWidth, 'Height:', screenHeight, 'Time:', Math.round(timeOnPage), 'sec, Scroll:', scrollDistance, 'px)');
-        passedCount++;
-      } else {
-        if (debug) console.log('Check Device Context: FAILED (Width:', screenWidth, 'Height:', screenHeight, 'Time:', Math.round(timeOnPage), 'sec, Scroll:', scrollDistance, 'px, WeirdAspect:', aspectRatio, 'Mismatch:', isMismatch, 'LowInteraction:', isLowInteraction, ')');
-      }
-
-      // 3. Проверка времени на странице
-      if (timeOnPage > 3) {
-        ym(counterId, 'reachGoal', 'check_time_on_page_passed', { time: Math.round(timeOnPage) });
-        if (debug) console.log('Check Time on Page: PASSED (Time:', Math.round(timeOnPage), 'sec)');
-        passedCount++;
-      } else {
-        if (debug) console.log('Check Time on Page: FAILED (Time:', Math.round(timeOnPage), 'sec)');
-      }
-
-      // 4. Проверка скролла
-      const pageHeight = document.documentElement.scrollHeight;
-      const windowHeight = window.innerHeight;
-      if (scrollDistance > 10 || pageHeight <= windowHeight) {
-        ym(counterId, 'reachGoal', 'check_scroll_passed', { distance: scrollDistance });
-        if (debug) console.log('Check Scroll: PASSED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
-        passedCount++;
-      } else {
-        if (debug) console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
-      }
-
-      // 5. Проверка Canvas
+      // 2. Проверка Canvas Fingerprint
       checkCanvas(function(isValid) {
         if (isValid) {
-          ym(counterId, 'reachGoal', 'check_canvas_passed');
-          if (debug) console.log('Check Canvas: PASSED (Final check)');
+          ym(counterId, 'reachGoal', 'check_canvas_fingerprint_passed');
+          if (debug) console.log('Check Canvas Fingerprint: PASSED');
           passedCount++;
         } else {
-          if (debug) console.log('Check Canvas: FAILED (Final check)');
+          if (debug) console.log('Check Canvas Fingerprint: FAILED');
         }
-        
-        // Финальный лог и отправка события all_checks_passed
-        if (debug) console.log('All checks completed. Passed:', passedCount + '/5', ', Events sent for counter ID:', counterId);
-        
-        if (passedCount === 5) {
-          ym(counterId, 'reachGoal', 'all_checks_passed');
-          if (debug) console.log('All 5 checks passed: Sending all_checks_passed event');
+
+        // 3. Проверка времени на странице
+        if (timeOnPage > 3) {
+          ym(counterId, 'reachGoal', 'check_time_on_page_passed', { time: Math.round(timeOnPage) });
+          if (debug) console.log('Check Time on Page: PASSED (Time:', Math.round(timeOnPage), 'sec)');
+          passedCount++;
+        } else {
+          if (debug) console.log('Check Time on Page: FAILED (Time:', Math.round(timeOnPage), 'sec)');
         }
+
+        // 4. Проверка скролла
+        const pageHeight = document.documentElement.scrollHeight;
+        const windowHeight = window.innerHeight;
+        if (scrollDistance > 10 || pageHeight <= windowHeight) {
+          ym(counterId, 'reachGoal', 'check_scroll_passed', { distance: scrollDistance });
+          if (debug) console.log('Check Scroll: PASSED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
+          passedCount++;
+        } else {
+          if (debug) console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
+        }
+
+        // 5. Проверка Canvas (повторная для консистентности)
+        checkCanvas(function(isValid) {
+          if (isValid) {
+            ym(counterId, 'reachGoal', 'check_canvas_passed');
+            if (debug) console.log('Check Canvas: PASSED (Final check)');
+            passedCount++;
+          } else {
+            if (debug) console.log('Check Canvas: FAILED (Final check)');
+          }
+          
+          // Финальный лог и отправка события all_checks_passed
+          if (debug) console.log('All checks completed. Passed:', passedCount + '/5', ', Events sent for counter ID:', counterId);
+          
+          if (passedCount === 5) {
+            ym(counterId, 'reachGoal', 'all_checks_passed');
+            if (debug) console.log('All 5 checks passed: Sending all_checks_passed event');
+          }
+        });
       });
     } else {
       console.error('Yandex Metrika not loaded. No events sent.');
