@@ -11,174 +11,104 @@ function getMetrikaCounterId() {
       return idFromUrl;
     }
   }
-  
-  const scripts = document.getElementsByTagName('script');
-  for (let script of scripts) {
-    const src = script.src;
-    if (src && src.includes('yandex.ru/metrika')) {
-      const match = src.match(/id=(\d+)/);
-      if (match && match[1]) {
-        return match[1];
-      }
-    }
-  }
-  
   return '88094270'; // Fallback ID
 }
 
-// Инициализация переменных
-let scrollDistance = 0;
-let startTime = Date.now();
-let userAgent = navigator.userAgent.toLowerCase();
-let screenWidth = screen.width;
-let screenHeight = screen.height;
-let lastScrollY = window?.scrollY || 0;
-
-// Функция проверки User-Agent на бота
-function isBotUserAgent() {
-  return /bot|headless|spider|crawler|phantom|slurp|googlebot/i.test(userAgent) ||
-         /headlesschrome/i.test(userAgent) ||
-         userAgent.indexOf('mobile') > -1 && screenWidth * screenHeight < 100000 ||
-         navigator.webdriver === true;
-}
-
-// Проверка Canvas fingerprint
-function checkCanvas(callback) {
-  if (debug) console.log('Check Canvas: Starting fingerprint generation');
-  
+// Проверка "Цветовая игра"
+function checkColorPerception(callback) {
+  if (debug) console.log('Check Color Perception: Starting test');
   const canvas = document.createElement('canvas');
   canvas.width = 200;
   canvas.height = 100;
   const ctx = canvas.getContext('2d');
   
   if (!ctx) {
-    if (debug) console.log('Check Canvas: FAILED (No context)');
+    if (debug) console.log('Check Color Perception: FAILED (No context)');
     callback(false);
     return;
   }
   
-  ctx.textBaseline = 'top';
-  ctx.font = '14px Arial';
-  ctx.fillStyle = '#f60';
-  ctx.fillRect(125, 1, 62, 20);
-  ctx.fillStyle = '#069';
-  ctx.fillText('🦊 Hello, world!', 2, 15);
-  ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-  ctx.fillText('🦊 Hello, world!', 4, 17);
+  // Случайный цвет
+  const r = Math.floor(Math.random() * 256);
+  const g = Math.floor(Math.random() * 256);
+  const b = Math.floor(Math.random() * 256);
+  ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+  ctx.fillRect(0, 0, 200, 100);
   
-  const dataURL = canvas.toDataURL();
-  const isValid = dataURL.length > 1000 && dataURL !== 'data:,';
+  // Извлечение отрендеренного цвета
+  const imageData = ctx.getImageData(100, 50, 1, 1).data;
+  const renderedR = imageData[0];
+  const renderedG = imageData[1];
+  const renderedB = imageData[2];
   
-  if (debug) console.log('Check Canvas: DataURL length:', dataURL.length, ', Valid:', isValid);
+  // Сравнение (допуск 5%)
+  const diffR = Math.abs(r - renderedR) / 255;
+  const diffG = Math.abs(g - renderedG) / 255;
+  const diffB = Math.abs(b - renderedB) / 255;
+  const isValid = diffR < 0.05 && diffG < 0.05 && diffB < 0.05;
+  
+  if (debug) console.log('Check Color Perception: Original RGB:', r, g, b, 'Rendered RGB:', renderedR, renderedG, renderedB, 'Valid:', isValid);
   callback(isValid);
 }
 
-// Инициализация слушателей после загрузки DOM
-function initEventListeners() {
-  if (window && typeof window.addEventListener === 'function') {
-    window.addEventListener('scroll', function() {
-      const currentScrollY = window.scrollY || 0;
-      const delta = Math.abs(currentScrollY - lastScrollY);
-      scrollDistance += delta;
-      lastScrollY = currentScrollY;
-      if (debug) console.log('Window Scroll: Position =', currentScrollY, 'px, Delta =', delta, 'px');
+// Проверка "Эхо-ответ"
+function checkEchoResponse(callback) {
+  if (debug) console.log('Check Echo Response: Starting test');
+  const token = Math.random().toString(36).substring(2);
+  const startTime = Date.now();
+  
+  fetch(`/echo?token=${token}`, { method: 'GET', cache: 'no-store' })
+    .then(response => response.text())
+    .then(data => {
+      const endTime = Date.now();
+      const responseTime = (endTime - startTime) / 1000; // В секундах
+      const isValid = responseTime > 0.05 && responseTime < 2; // 50 мс - 2 сек
+      if (debug) console.log('Check Echo Response: Response time:', responseTime, 'sec, Valid:', isValid);
+      callback(isValid);
+    })
+    .catch(err => {
+      if (debug) console.log('Check Echo Response: FAILED (Fetch error:', err.message, ')');
+      callback(false); // Ошибка сети — провал
     });
-  } else {
-    if (debug) console.log('Window not available for scroll listener');
-  }
-
-  if (document.body && typeof document.body.addEventListener === 'function') {
-    document.body.addEventListener('scroll', function(e) {
-      const currentScrollY = e.target.scrollTop || 0;
-      const delta = Math.abs(currentScrollY - lastScrollY);
-      scrollDistance += delta;
-      lastScrollY = currentScrollY;
-      if (debug) console.log('Body Scroll: Position =', currentScrollY, 'px, Delta =', delta, 'px');
-    });
-  } else {
-    if (debug) console.log('Body not available for scroll listener');
-  }
-
-  if (window && typeof window.addEventListener === 'function') {
-    window.addEventListener('touchmove', function() {
-      const currentScrollY = window.scrollY || 0;
-      const delta = Math.abs(currentScrollY - lastScrollY);
-      scrollDistance += delta;
-      lastScrollY = currentScrollY;
-      if (debug) console.log('Touchmove: Position =', currentScrollY, 'px, Delta =', delta, 'px');
-    });
-  } else {
-    if (debug) console.log('Window not available for touchmove listener');
-  }
 }
 
 // Запуск после загрузки DOM
 document.addEventListener('DOMContentLoaded', function() {
-  if (debug) console.log('DOM fully loaded, initializing event listeners');
-  initEventListeners();
+  if (debug) console.log('DOM fully loaded, starting checks');
 
   // Проверка параметров через 7 секунд
   setTimeout(function() {
-    const timeOnPage = (Date.now() - startTime) / 1000;
     const counterId = getMetrikaCounterId();
     let passedCount = 0;
 
     if (typeof ym !== 'undefined') {
-      // 1. Проверка User-Agent
-      if (!isBotUserAgent()) {
-        ym(counterId, 'reachGoal', 'check_user_agent_passed');
-        if (debug) console.log('Check User-Agent: PASSED (User-Agent:', userAgent, ')');
-        passedCount++;
-      } else {
-        if (debug) console.log('Check User-Agent: FAILED (User-Agent:', userAgent, ')');
-      }
-
-      // 2. Проверка Canvas Fingerprint
-      checkCanvas(function(isValid) {
+      // 1. Проверка "Цветовая игра"
+      checkColorPerception(function(isValid) {
         if (isValid) {
-          ym(counterId, 'reachGoal', 'check_canvas_fingerprint_passed');
-          if (debug) console.log('Check Canvas Fingerprint: PASSED');
+          ym(counterId, 'reachGoal', 'check_color_perception_passed');
+          if (debug) console.log('Check Color Perception: PASSED');
           passedCount++;
         } else {
-          if (debug) console.log('Check Canvas Fingerprint: FAILED');
+          if (debug) console.log('Check Color Perception: FAILED');
         }
 
-        // 3. Проверка времени на странице
-        if (timeOnPage > 3) {
-          ym(counterId, 'reachGoal', 'check_time_on_page_passed', { time: Math.round(timeOnPage) });
-          if (debug) console.log('Check Time on Page: PASSED (Time:', Math.round(timeOnPage), 'sec)');
-          passedCount++;
-        } else {
-          if (debug) console.log('Check Time on Page: FAILED (Time:', Math.round(timeOnPage), 'sec)');
-        }
-
-        // 4. Проверка скролла
-        const pageHeight = document.documentElement.scrollHeight;
-        const windowHeight = window.innerHeight;
-        if (scrollDistance > 10 || pageHeight <= windowHeight) {
-          ym(counterId, 'reachGoal', 'check_scroll_passed', { distance: scrollDistance });
-          if (debug) console.log('Check Scroll: PASSED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
-          passedCount++;
-        } else {
-          if (debug) console.log('Check Scroll: FAILED (Distance:', scrollDistance, 'px, Page height:', pageHeight, 'px, Window height:', windowHeight, 'px)');
-        }
-
-        // 5. Проверка Canvas (повторная для консистентности)
-        checkCanvas(function(isValid) {
+        // 2. Проверка "Эхо-ответ"
+        checkEchoResponse(function(isValid) {
           if (isValid) {
-            ym(counterId, 'reachGoal', 'check_canvas_passed');
-            if (debug) console.log('Check Canvas: PASSED (Final check)');
+            ym(counterId, 'reachGoal', 'check_echo_response_passed');
+            if (debug) console.log('Check Echo Response: PASSED');
             passedCount++;
           } else {
-            if (debug) console.log('Check Canvas: FAILED (Final check)');
+            if (debug) console.log('Check Echo Response: FAILED');
           }
+
+          // Финальный лог и отправка событий
+          if (debug) console.log('All checks completed. Passed:', passedCount + '/2', ', Events sent for counter ID:', counterId);
           
-          // Финальный лог и отправка события all_checks_passed
-          if (debug) console.log('All checks completed. Passed:', passedCount + '/5', ', Events sent for counter ID:', counterId);
-          
-          if (passedCount === 5) {
+          if (passedCount === 2) {
             ym(counterId, 'reachGoal', 'all_checks_passed');
-            if (debug) console.log('All 5 checks passed: Sending all_checks_passed event');
+            ym(counterId, 'reachGoal', 'both_checks_passed');
+            if (debug) console.log('All 2 checks passed: Sending all_checks_passed and both_checks_passed events');
           }
         });
       });
