@@ -74,7 +74,7 @@ function checkRandomNoise(callback) {
 document.addEventListener('DOMContentLoaded', function() {
   if (debug) console.log('DOM fully loaded, starting checks');
 
-  // Проверка параметров через 7 секунд
+  // Проверка параметров через 10 секунд
   setTimeout(function() {
     const counterId = getMetrikaCounterId();
     let passedCount = 0;
@@ -113,5 +113,5 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       console.error('Yandex Metrika not loaded. No events sent.');
     }
-  }, 7000);
+  }, 10000);
 });
