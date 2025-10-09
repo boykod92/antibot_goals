@@ -51,30 +51,23 @@ function checkColorPerception(callback) {
   callback(isValid);
 }
 
-// Проверка "Эхо-ответ"
-function checkEchoResponse(callback) {
-  if (debug) console.log('Check Echo Response: Starting test');
-  const token = Math.random().toString(36).substring(2);
-  const startTime = Date.now();
-  
-  fetch(`/echo?token=${token}`, { method: 'GET', cache: 'no-store' })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-      return response.text();
-    })
-    .then(data => {
-      const endTime = Date.now();
-      const responseTime = (endTime - startTime) / 1000; // В секундах
-      const isValid = responseTime > 0.05 && responseTime < 2; // 50 мс - 2 сек
-      if (debug) console.log('Check Echo Response: Response time:', responseTime, 'sec, Valid:', isValid);
-      callback(isValid);
-    })
-    .catch(err => {
-      if (debug) console.log('Check Echo Response: FAILED (Error:', err.message, ')');
-      callback(false); // Ошибка (включая 404) — провал
-    });
+// Проверка "Случайный шум"
+function checkRandomNoise(callback) {
+  if (debug) console.log('Check Random Noise: Starting test');
+  const samples = [];
+  for (let i = 0; i < 5; i++) {
+    samples.push(Math.random());
+  }
+  if (debug) console.log('Check Random Noise: Samples:', samples);
+
+  // Вычисление среднего и стандартного отклонения
+  const mean = samples.reduce((a, b) => a + b) / samples.length;
+  const variance = samples.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / samples.length;
+  const stdDev = Math.sqrt(variance);
+  const isValid = stdDev > 0.2; // Минимальное отклонение для случайности
+
+  if (debug) console.log('Check Random Noise: StdDev:', stdDev, 'Valid:', isValid);
+  callback(isValid);
 }
 
 // Запуск после загрузки DOM
@@ -97,14 +90,14 @@ document.addEventListener('DOMContentLoaded', function() {
           if (debug) console.log('Check Color Perception: FAILED');
         }
 
-        // 2. Проверка "Эхо-ответ"
-        checkEchoResponse(function(isValid) {
+        // 2. Проверка "Случайный шум"
+        checkRandomNoise(function(isValid) {
           if (isValid) {
-            ym(counterId, 'reachGoal', 'check_echo_response_passed');
-            if (debug) console.log('Check Echo Response: PASSED');
+            ym(counterId, 'reachGoal', 'check_random_noise_passed');
+            if (debug) console.log('Check Random Noise: PASSED');
             passedCount++;
           } else {
-            if (debug) console.log('Check Echo Response: FAILED');
+            if (debug) console.log('Check Random Noise: FAILED');
           }
 
           // Финальный лог и отправка событий
