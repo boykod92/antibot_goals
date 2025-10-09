@@ -58,7 +58,12 @@ function checkEchoResponse(callback) {
   const startTime = Date.now();
   
   fetch(`/echo?token=${token}`, { method: 'GET', cache: 'no-store' })
-    .then(response => response.text())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.text();
+    })
     .then(data => {
       const endTime = Date.now();
       const responseTime = (endTime - startTime) / 1000; // В секундах
@@ -67,8 +72,8 @@ function checkEchoResponse(callback) {
       callback(isValid);
     })
     .catch(err => {
-      if (debug) console.log('Check Echo Response: FAILED (Fetch error:', err.message, ')');
-      callback(false); // Ошибка сети — провал
+      if (debug) console.log('Check Echo Response: FAILED (Error:', err.message, ')');
+      callback(false); // Ошибка (включая 404) — провал
     });
 }
 
